@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Moz Project</title>
+</head>
+<body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $("button").hide();
+        $("submitBtn").click(function () {
+            console.log("clicked");
+            $("button").show();
+        });
+    });
+</script>
+
+<!--  SINGLE FILE -->
+<form action="/uploadfile" enctype="multipart/form-data" method="POST">
+    <input type="file" name="myFile"/>
+    <input id="submitBtn" type="submit" value="Upload"/>
+</form>
+<button>Render Chart</button>
+
+</body>
+</html>
