@@ -10,6 +10,30 @@ const fs = require ('fs');
 const path = require ('path');
 
 module.exports = {
+    queryEs: function(queryString, size, fields, sort){
+        const {Client} = require('@elastic/elasticsearch')
+        const client = new Client({node: 'http://localhost:9200'})
+        const csv = require('csvtojson')
+        const esIndex = 'mozdata'
+        const jsonQuery = JSON.parse(queryString);
+        var sourceFields = fields ? JSON.parse(fields) : [];
+        var sortOrder = sort ? JSON.parse(sort) : {};
+
+        async function doQuery(Query, size, fields, sort) {
+            await client.indices.refresh({ index: esIndex });
+            const { body } = await client.search({
+                index: esIndex,
+                _source: fields,
+                // type: '_doc', // uncomment this line if you are using Elasticsearch ≤ 6
+                body: Query,
+                sort : sort,
+                size : size
+            })
+            return (body);
+        }
+        var response = doQuery(jsonQuery,size, sourceFields, sourceFields).catch(console.log);
+        return response;
+    },
     //NOT USED
     uploadedFile: function() {
         const uploadPath = path.join(__dirname, 'uploads');
@@ -25,7 +49,7 @@ module.exports = {
         return latestFile;
     },
     // Ingest file to elasticsearch index
-    ingest: function(csvFilePath) {
+    ingest: async function(csvFilePath) {
         const {Client} = require('@elastic/elasticsearch')
         const client = new Client({node: 'http://localhost:9200'})
         const csv = require('csvtojson')
@@ -113,9 +137,11 @@ module.exports = {
             })
                 client.bulk({body:bulkBody});
             };
-            await bulkIndex(esIndex, jsonArray);
+            let bulk = await bulkIndex(esIndex, jsonArray);
+            let refresh = await client.indices.refresh({ index: esIndex });
+            await new Promise((resolve, reject) => setTimeout(resolve, 3000));
         }
         //Execute ingestion
-        doIngest().catch(console.log);
+        return doIngest().catch(console.log);
     }
 }

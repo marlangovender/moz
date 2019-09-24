@@ -21,7 +21,7 @@ app.set('view engine', 'pug');
 app.use('/', routes);
 
 //POST endpoint to upload single file
-app.post('/uploadfile', uploader.single('myFile'), (req, res, next) => {
+app.post('/uploadfile', uploader.single('myFile'), async function (req, res, next) {
     const file = req.file
     var uploadStatus = "",
         filename = "";
@@ -29,8 +29,8 @@ app.post('/uploadfile', uploader.single('myFile'), (req, res, next) => {
         filename = file.originalname;
         uploadStatus = filename + ' uploaded successfully';
         res.status(200);
-        var ingestFile = csv2es.ingest(path.join(uploadPath,file.filename));
-        res.redirect(307, '/render');
+        var ingestFile = await csv2es.ingest(path.join(uploadPath,file.filename));
+        var showRender = await res.redirect(307, '/render');
     } else {
         console.log('No File Uploaded');
         filename = 'FILE NOT UPLOADED';
@@ -47,8 +47,9 @@ app.post('/render', function (req, res) {
 })
 
 //GET endpoing to obtain chart data
-app.get('esQuery', function (req, res){
-
+app.get('/esQuery', async function (req, res){
+    var queryEs = await csv2es.queryEs(req.query.Query, req.query.Size, req.query.Fields, req.query.Sort);
+    res.send(queryEs);
 })
 
 module.exports = app;

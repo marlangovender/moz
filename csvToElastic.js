@@ -56,7 +56,7 @@ var ingest = async function convert() {
     await client.indices.refresh({ index: esIndex })
 
     // Let's search!
-    const { body } = await client.search({
+    /*const { body } = await client.search({
         index: esIndex,
         // type: '_doc', // uncomment this line if you are using Elasticsearch ≤ 6
         body: {
@@ -68,9 +68,24 @@ var ingest = async function convert() {
         },
         size : 0
     })
-    console.log(body.aggregations.type_count.buckets);
-
-}
+    var uniqueSearches = body.aggregations.type_count.buckets;
+    //console.log (uniqueSearches);
+    uniqueSearches.forEach(function (element) {
+        //console.log(element.key);
+*/
+    //})
+    const { body } = await client.search({
+        index: esIndex,
+        // type: '_doc', // uncomment this line if you are using Elasticsearch ≤ 6
+        body: {
+            query: {
+                terms: { Keyword: ['analytic', 'seo'] }
+            }
+        },
+        size : 30
+    })
+    console.log(body.hits.total);
+ }
 ingest().catch(console.log);
 
 

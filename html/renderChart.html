@@ -12,10 +12,96 @@
 </style>
 
 <body>
+<link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.css" />
+<link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid-theme.min.css" />
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.js"></script>
+<!-- Dummy charts for testing.  TODO : populate with elastic data -->
 <script>
-    // Bar chart
+
+    $.get("esQuery?Query={ \"aggs\" : { \"type_count\" : { \"terms\" : { \"field\" : \"Keyword.keyword\" } } } }&Size=100", function(data, status){
+        var chartData = data.aggregations.type_count.buckets;
+        console.log(chartData);
+        $(function () {
+            $("#jsGrid").jsGrid({
+                width: "100%",
+                height: "90%",
+                sorting: true,
+                paging: true,
+                filtering: true,
+
+                data: chartData,
+
+                fields: [
+                    { name: "key", title : "Search Keys", type: "text", width: 60, validate: "required" },
+                    { name: "doc_count", title: "Record Count", type: "number", width: 40, align : "center" },
+                    { type: "control" }
+                ],
+                rowClick: function(args) {
+                    renderChart(args);
+                }
+            });
+
+        })
+
+    });
+
+    function renderChart(args) {
+        var getData = args.item;
+        var keys = Object.keys(getData);
+        var searchKeys = getData.key;
+        console.log(searchKeys);
+        $.get("esQuery?Query={\"query\":{\"match_phrase\":{\"Keyword\":\""+searchKeys+"\"}}}&Size=30&Fields=[\"Date\",\"Yahoo\",\"Google\",\"Google%20Base%20Rank\",\"Bing\",\"Market.keyword\"]&Sort={\"Date\":%20{\"order\":%20\"asc\"}%20}", function( data, status ) {
+            //console.log(data.hits.hits);
+            var dataArray = data.hits.hits;
+            var google=[];
+            var googleBR=[];
+            var yahoo=[];
+            var bing=[];
+            var googleEn=[];
+            var googleBREn=[];
+            var yahooEn=[];
+            var bingEn=[];
+            var dates = [];
+            dataArray.forEach(function(obj){
+                console.log(obj._source);
+                if (obj._source['Market.keyword']=='GB-en') {
+                    console.log('Inside');
+                     googleEn.push(obj._source['Google']);
+                     googleBREn.push(obj._source['Google Base Rank']);
+                     yahooEn.push(obj._source['Yahoo']);
+                     bingEn.push(obj._source['Bing']);
+                     dates.push(obj._source['Date'])
+                }
+            })
+            console.log(dates);
+            new Chart(document.getElementById("bar-chart"), {
+                type: 'bar',
+                data: {
+                    labels: ["Africa", "Asia", "Europe", "Latin America", "North America"],
+                    datasets: [
+                        {
+                            label: "Population (millions)",
+                            backgroundColor: ["#3e95cd", "#8e5ea2", "#3cba9f", "#e8c3b9", "#c45850"],
+                            data: [2478, 5267, 734, 784, 433]
+                        }
+                    ]
+                },
+                options: {
+                    legend: {display: true},
+                    title: {
+                        display: true,
+                        text: 'Predicted world population (millions) in 2050'
+                    }
+                }
+            });
+        });
+    }
+
+        // Bar chart
+/*
     window.onload = function() {
         new Chart(document.getElementById("bar-chart"), {
             type: 'bar',
@@ -58,7 +144,10 @@
             }
         });
     }
+*/
 </script>
+<div id="jsGrid">
+</div>
 <div class="container">
     <canvas id="bar-chart" ></canvas>
 </div>
