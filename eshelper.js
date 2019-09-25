@@ -34,20 +34,6 @@ module.exports = {
         var response = doQuery(jsonQuery,size, sourceFields, sourceFields).catch(console.log);
         return response;
     },
-    //NOT USED
-    uploadedFile: function() {
-        const uploadPath = path.join(__dirname, 'uploads');
-        var files = fs.readdirSync(uploadPath);
-        let filepath = path.join(uploadPath, file);
-        stats = fs.statSync(filepath);
-        var latestCTime = 0;
-        var latestFile = '';
-        if (latestCTime < stats.ctime) {
-            latestFile = filepath;
-            latestCTime = stats.ctime;
-        }
-        return latestFile;
-    },
     // Ingest file to elasticsearch index
     ingest: async function(csvFilePath) {
         const {Client} = require('@elastic/elasticsearch')

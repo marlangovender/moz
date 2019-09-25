@@ -1,190 +1,330 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <style>
+        .container {
+            width: 40%;
+            height: 40%;
+        }
+        #left {
+            float: left;
+            width: 50%;
+            overflow: hidden;
+        }
+        #right {
+            overflow: hidden;
+        }
+    </style>
     <meta charset="UTF-8">
     <title>Display Chart</title>
-</head>
-<style>
-    .container {
-        width: 40%;
-        height: 40%;
-    }
-    #left {
-        float: left;
-        width: 50%;
-        overflow: hidden;
-    }
-    #right {
-        overflow: hidden;
-    }
-</style>
 
-<body>
-<link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.css" />
-<link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid-theme.min.css" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.css" />
+    <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid-theme.min.css" />
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.js"></script>
-<!-- Dummy charts for testing.  TODO : populate with elastic data -->
-<script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.js"></script>
+    <script>
 
-    $.get("esQuery?Query={ \"aggs\" : { \"type_count\" : { \"terms\" : { \"field\" : \"Keyword.keyword\" , \"size\" : \"400\"} } } }&Size=100", function(data, status){
-        var chartData = data.aggregations.type_count.buckets;
-        //console.log(chartData);
-        $(function () {
-            document.getElementById("btnleft").style.display = "none";
-            document.getElementById("btnright").style.display = "none";
-            $("#jsGrid").jsGrid({
-                width: "100%",
-                height: "500px",
-                sorting: true,
-                paging: true,
-                data: chartData,
 
-                fields: [
-                    { name: "key", title : "Search Keys", type: "text", width: 60, validate: "required" },
-                    { name: "doc_count", title: "Record Count", type: "number", width: 40, align : "center" },
-                    { type: "control" }
-                ],
-                rowClick: function(args) {
-                    renderChart(args);
-                }
-            });
+        var dataAll = []; //stores data for csv export
+        //Retrieve aggregation counts of searched keywords
+        $.get("esQuery?Query={ \"aggs\" : { \"type_count\" : { \"terms\" : { \"field\" : \"Keyword.keyword\" , \"size\" : \"400\"} } } }&Size=100", function(data, status){
+            var chartData = data.aggregations.type_count.buckets;
+            //console.log(chartData);
+            $(function () {
+                document.getElementById("btnleft").style.display = "none";
+                //document.getElementById("btnright").style.display = "none";
+                $("#jsGrid").jsGrid({
+                    width: "100%",
+                    height: "500px",
+                    sorting: true,
+                    paging: true,
+                    heading: true,
+                    data: chartData,
 
-        })
+                    fields: [
+                        { name: "key", title : "Search Keys", type: "text", width: 60, validate: "required" },
+                        { name: "doc_count", title: "Record Count", type: "number", width: 40, align : "center" },
+                        { type: "control" }
+                    ],
+                    rowClick: function(args) {
+                        renderChart(args);
+                    },
+                    rowDoubleClick : function (args) {
+                        showDetailsDialog(args);
+                        $('#myModal').on('shown.bs.modal', function() {
+                            $("#userGrid").jsGrid("refresh");
+                        })
+                    }
+                });
 
-    });
-
-    function renderChart(args) {
-        var getData = args.item;
-        var keys = Object.keys(getData);
-        var searchKeys = getData.key;
-        console.log(searchKeys);
-        $.get("esQuery?Query={\"query\":{\"match_phrase\":{\"Keyword\":\""+searchKeys+"\"}}}&Size=30&Fields=[]&Sort={\"Date\":%20{\"order\":%20\"asc\"}%20}", function( data, status ) {
-            //console.log(data.hits.hits);
-            var dataArray = data.hits.hits;
-            dataArray.sort((a, b) => (a._source.Date > b._source.Date) ? 1 : -1)
-            var google=[];
-            var googleBR=[];
-            var yahoo=[];
-            var bing=[];
-            var googleEn=[];
-            var googleBREn=[];
-            var yahooEn=[];
-            var bingEn=[];
-            var dates = [];
-            var dataUS = [];
-            var dataEn = [];
-            dataArray.forEach(function(obj){
-                if (obj._source['Market']=='GB-en') {
-                     dataEn.push(obj._source);
-                     googleEn.push(obj._source['Google']);
-                     googleBREn.push(obj._source['Google Base Rank']);
-                     yahooEn.push(obj._source['Yahoo']);
-                     bingEn.push(obj._source['Bing']);
-                     dates.push(obj._source['Date']);
-                } else {
-                    dataUS.push(obj._source);
-                    google.push(obj._source['Google']);
-                    googleBR.push(obj._source['Google Base Rank']);
-                    yahoo.push(obj._source['Yahoo']);
-                    bing.push(obj._source['Bing']);
-                }
             })
 
-            //console.log(dates);
-            new Chart(document.getElementById("US"), {
-                type: 'line',
-                data: {
-                    labels: dates,
-                    datasets: [
-                        {
-                            label: "Google",
-                            borderColor: "#3e95cd",
-                            data: google,
-                            fill: false
-                        },
-                        {
-                            label: "Google Base Rank",
-                            borderColor: "#8e5ea2",
-                            data: googleBR,
-                            fill: false
-                        },
-                        {
-                            label: "Bing",
-                            borderColor: "#3cba9f",
-                            data: bing,
-                            fill: false
-                        },
-                        {
-                            label: "Yahoo",
-                            borderColor: "#e8c3b9",
-                            data: yahoo,
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    legend: {display: true},
-                    title: {
-                        display: true,
-                        text: 'Moz Search Analytics (US) - ' + searchKeys
-                    }
-                }
-            });
-            new Chart(document.getElementById("GB"), {
-                type: 'line',
-                data: {
-                    labels: dates,
-                    datasets: [
-                        {
-                            label: "Google",
-                            borderColor: "#3e95cd",
-                            data: googleEn,
-                            fill: false
-                        },
-                        {
-                            label: "Google Base Rank",
-                            borderColor: "#8e5ea2",
-                            data: googleBREn,
-                            fill: false
-                        },
-                        {
-                            label: "Bing",
-                            borderColor: "#3cba9f",
-                            data: bingEn,
-                            fill: false
-                        },
-                        {
-                            label: "Yahoo",
-                            borderColor: "#e8c3b9",
-                            data: yahooEn,
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    legend: {display: true},
-                    title: {
-                        display: true,
-                        text: 'Moz Search Analytics (GB) - '+ searchKeys
-                    }
-                }
-            });
         });
-        document.getElementById("btnleft").style.display = "block";
-        document.getElementById("btnright").style.display = "block";
-    }
 
-</script>
+
+        function showDetailsDialog(args) {
+            var getData = args.item;
+            var keys = Object.keys(getData);
+            var searchKeys = getData.key;
+            //console.log(searchKeys);
+            //Search ES for documents
+            $.get("esQuery?Query={\"query\":{\"match_phrase\":{\"Keyword\":\""+searchKeys+"\"}}}&Size=30&Fields=[]&Sort={\"Date\":%20{\"order\":%20\"asc\"}%20}", function( data, status ) {
+                var dataArray = data.hits.hits;
+                dataArray.sort((a, b) => (a._source.Date > b._source.Date) ? 1 : -1)
+                var gridData = [];
+                dataArray.forEach(function(obj){
+                    gridData.push(obj._source);
+                });
+                $("#myModal").modal({backdrop: "static"});
+                $("#userGrid").jsGrid({
+                    width: "100%",
+                    height: "500px",
+                    sorting: true,
+                    paging: true,
+                    heading: true,
+                    data: gridData,
+
+                    fields: [
+                        { name: "Date", title : "Date", type: "date", width: 60, validate: "required" },
+                        { name: "Keyword", title: "Keyword", type: "text", width: 60, align : "center" },
+                        { name: "Google", title: "Google", type: "number", width: 40, align : "center" },
+                        { name: "Google Base Rank", title: "Google Base Rank", type: "number", width: 40, align : "center" },
+                        { name: "Bing", title: "Bing", type: "number", width: 40, align : "center" },
+                        { name: "Yahoo", title: "Yahoo", type: "number", width: 40, align : "center" },
+                        { name: "Market", title: "Market", type: "text", width: 40, align : "center" }
+                    ]
+                });
+            });
+        }
+
+        /**
+         * Draw Chart for selected keywords
+         * @param args
+         */
+        function renderChart(args) {
+            var getData = args.item;
+            var keys = Object.keys(getData);
+            var searchKeys = getData.key;
+            //console.log(searchKeys);
+            //Search ES for documents
+            $.get("esQuery?Query={\"query\":{\"match_phrase\":{\"Keyword\":\""+searchKeys+"\"}}}&Size=30&Fields=[]&Sort={\"Date\":%20{\"order\":%20\"asc\"}%20}", function( data, status ) {
+                //console.log(data.hits.hits);
+                var dataArray = data.hits.hits;
+                //Elastic sort is not working.  Using sort function to order results by date
+                dataArray.sort((a, b) => (a._source.Date > b._source.Date) ? 1 : -1)
+                var google=[];
+                var googleBR=[];
+                var yahoo=[];
+                var bing=[];
+                var googleEn=[];
+                var googleBREn=[];
+                var yahooEn=[];
+                var bingEn=[];
+                var dates = [];
+                var dataUS = [];
+                var dataEn = [];
+                //Add data to array for jschart format
+                dataArray.forEach(function(obj){
+                    if (obj._source['Market']=='GB-en') {
+                        dataEn.push(obj._source);
+                        googleEn.push(obj._source['Google']);
+                        googleBREn.push(obj._source['Google Base Rank']);
+                        yahooEn.push(obj._source['Yahoo']);
+                        bingEn.push(obj._source['Bing']);
+                        dates.push(obj._source['Date']);
+                    } else {
+                        dataUS.push(obj._source);
+                        google.push(obj._source['Google']);
+                        googleBR.push(obj._source['Google Base Rank']);
+                        yahoo.push(obj._source['Yahoo']);
+                        bing.push(obj._source['Bing']);
+                    }
+                    dataAll = dataEn.concat(dataUS);
+                })
+
+                //Clear canvas before rendering or re-rendering a chart
+                $("canvas#US").remove();
+                $("div#left").append('<canvas id="US" class="animated fadeIn"></canvas>');
+                $("canvas#GB").remove();
+                $("div#right").append('<canvas id="GB" class="animated fadeIn"></canvas>');
+                var chartUS = new Chart(document.getElementById("US"), {
+                    type: 'line',
+                    data: {
+                        labels: dates,
+                        datasets: [
+                            {
+                                label: "Google",
+                                borderColor: "#3e95cd",
+                                data: google,
+                                fill: false
+                            },
+                            {
+                                label: "Google Base Rank",
+                                borderColor: "#8e5ea2",
+                                data: googleBR,
+                                fill: false
+                            },
+                            {
+                                label: "Bing",
+                                borderColor: "#3cba9f",
+                                data: bing,
+                                fill: false
+                            },
+                            {
+                                label: "Yahoo",
+                                borderColor: "#e8c3b9",
+                                data: yahoo,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        legend: {display: true},
+                        title: {
+                            display: true,
+                            text: 'Moz Search Analytics (US) - ' + searchKeys
+                        }
+                    }
+                });
+                var chartGB = new Chart(document.getElementById("GB"), {
+                    type: 'line',
+                    data: {
+                        labels: dates,
+                        datasets: [
+                            {
+                                label: "Google",
+                                borderColor: "#3e95cd",
+                                data: googleEn,
+                                fill: false
+                            },
+                            {
+                                label: "Google Base Rank",
+                                borderColor: "#8e5ea2",
+                                data: googleBREn,
+                                fill: false
+                            },
+                            {
+                                label: "Bing",
+                                borderColor: "#3cba9f",
+                                data: bingEn,
+                                fill: false
+                            },
+                            {
+                                label: "Yahoo",
+                                borderColor: "#e8c3b9",
+                                data: yahooEn,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        legend: {display: true},
+                        title: {
+                            display: true,
+                            text: 'Moz Search Analytics (GB) - '+ searchKeys
+                        }
+                    }
+                });
+            });
+            document.getElementById("btnleft").style.display = "block";
+        }
+
+        /**
+         * Convert JSON Array to CSV
+         * @param objArray
+         * @returns {string}
+         */
+        function convertToCSV(objArray) {
+            var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
+            var str = '';
+            for (var i = 0; i < array.length; i++) {
+                var line = '';
+                for (var index in array[i]) {
+                    if (line != '') line += ','
+                    line += array[i][index];
+                }
+                str += line + '\r\n';
+            }
+            return str;
+        }
+
+        /**
+         * Export CSV
+         * @param headers
+         * @param items
+         * @param fileTitle
+         */
+        function exportCSVFile(items, fileTitle) {
+
+            // Convert Object to JSON
+            var jsonObject = JSON.stringify(items);
+
+            var csv = convertToCSV(jsonObject);
+
+            var exportedFilenmae = fileTitle + '.csv' || 'export.csv';
+
+            var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement("a");
+            if (link.download !== undefined) { // feature detection
+                var url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", exportedFilenmae);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        function DownloadCSV() {
+            exportCSVFile(dataAll, 'download');
+        }
+
+
+    </script>
+</head>
+
+
+<body>
+
+<div id="myModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Details</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="container-fluid">
+                    <div id="userGrid"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+
+    </div>
+</div>
 
 <div id="wrapper">
     <div id="jsGrid"></div>
-    <div id="left"><canvas id="US" ></canvas></div>
-    <div id="right"><canvas id="GB" ></canvas></div>
-    <div align="left"><button id="btnleft" type="button" class="btn btn-success btn-md" onclick="DownloadCSV();">Download CSV </button></div>
-    <div align="right"><button id="btnright" type="button" class="btn btn-success btn-md" onclick="DownloadCSV();">Download CSV </button></div>
+    <div class="text-left">
+        <button id="btnleft" type="button" class="btn btn-primary" onclick="DownloadCSV();">Download CSV</button>
+    </div>
+    <div id="left">
+        <canvas id="US"></canvas>
+    </div>
+    <div id="right">
+        <canvas id="GB"></canvas>
+    </div>
 </div>
 
 </body>

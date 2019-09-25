@@ -2,7 +2,7 @@
 
 const {Client} = require('@elastic/elasticsearch')
 const client = new Client({node: 'http://localhost:9200'})
-const getUploadedFile = require('./uploadedFile');
+const getUploadedFile = require('../eshelper');
 const csvFilePath = getUploadedFile
 const csv = require('csvtojson')
 const esIndex = 'mozdata'
