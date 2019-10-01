@@ -13,6 +13,8 @@ Weighted rankings for all the above search engines over an arbitrary date range 
 
 We would like the user to be able to export CSV data that was used to generate the 2 visualizations above for the selected date range. Use a programming language of your choice to accomplish as much as you can.
 
+
+App Installation Instructions :
 1. Install elasticsearch https://www.elastic.co/downloads/elasticsearch
 2. Run the cluster on localhost using the default port 9200
 3. Install NodeJS https://nodejs.org/en/download/
